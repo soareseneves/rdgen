@@ -88,7 +88,8 @@ def generator_view(request):
             myuuid = str(uuid.uuid4())
             protocol = _settings.PROTOCOL
             host = request.get_host()
-            full_url = f"{protocol}://{host}"
+            # Use GENURL from settings if available, otherwise use request host
+            full_url = _settings.GENURL if _settings.GENURL else f"{protocol}://{host}"
             try:
                 iconfile = form.cleaned_data.get('iconfile')
                 if not iconfile:

@@ -343,24 +343,40 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: C:\vcpkg
-          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          doNotCache: false
+          vcpkCache vcpkg installed packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:\vcpkg\installed\${{ matrix.job.vcpkg-triplet }}
+            C:\vcpkg\packages
+          key: vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-v1
+          restore-keys: |
+            vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-
+            vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-
 
       - name: Install vcpkg dependencies
         env:
           VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.job.vcpkg-triplet }}
         run: |
-          if ! $VCPKG_ROOT/vcpkg \
-            install \
-            --triplet ${{ matrix.job.vcpkg-triplet }} \
-            --x-install-root="$VCPKG_ROOT/installed"; then
-            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
-              echo "$_1:"
-              echo "======"
-              cat "$_1"
-              echo "======"
-              echo ""
-            done
+          # Verifica se os pacotes já estão instalados
+          if [ -d "$VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }}" ] && [ "$(ls -A $VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }} 2>/dev/null)" ]; then
+            echo "Packages already cached and installed, skipping vcpkg install..."
+          else
+            if ! $VCPKG_ROOT/vcpkg \
+              install \
+              --triplet ${{ matrix.job.vcpkg-triplet }} \
+              --x-install-root="$VCPKG_ROOT/installed"; then
+              find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+                echo "$_1:"
+                echo "======"
+                cat "$_1"
+                echo "======"
+                echo ""
+              done
+              exit 1
+            fi
+            head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+          fi
             exit 1
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
