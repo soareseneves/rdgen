@@ -1,6 +1,6 @@
 name: Custom Windows Client Generator
 run-name: Custom Windows Client Generator
-on: 
+on:
   workflow_dispatch:
     inputs:
       server:
@@ -196,6 +196,9 @@ jobs:
           sed -i -e 's|"RustDesk"|"${{ inputs.appname }}"|' ./flutter/windows/runner/Runner.rc
           # ./src/lang/en.rs
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ inputs.appname }}|' {} \;
+          # Fix "Developed by" in home page to use company name
+          sed -i -e 's|by ${{ inputs.appname }}|by ${{ fromJson(inputs.extras).compname }}|g' ./flutter/lib/desktop/pages/desktop_home_page.dart
+          sed -i -e 's|por ${{ inputs.appname }}|por ${{ fromJson(inputs.extras).compname }}|g' ./flutter/lib/desktop/pages/desktop_home_page.dart
 
       - name: fix registry if appname has a space
         if: contains(inputs.appname, ' ')
@@ -343,21 +346,40 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:\vcpkg\installed\${{ matrix.job.vcpkg-triplet }}
+            C:\vcpkg\packages
+          key: vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-v1
+          restore-keys: |
+            vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-
+            vcpkg-installed-${{ runner.os }}-${{ matrix.job.vcpkg-triplet }}-
+
       - name: Install vcpkg dependencies
         env:
           VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.job.vcpkg-triplet }}
         run: |
-          if ! $VCPKG_ROOT/vcpkg \
-            install \
-            --triplet ${{ matrix.job.vcpkg-triplet }} \
-            --x-install-root="$VCPKG_ROOT/installed"; then
-            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
-              echo "$_1:"
-              echo "======"
-              cat "$_1"
-              echo "======"
-              echo ""
-            done
+          # Verifica se os pacotes já estão instalados
+          if [ -d "$VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }}" ] && [ "$(ls -A $VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }} 2>/dev/null)" ]; then
+            echo "Packages already cached and installed, skipping vcpkg install..."
+          else
+            if ! $VCPKG_ROOT/vcpkg \
+              install \
+              --triplet ${{ matrix.job.vcpkg-triplet }} \
+              --x-install-root="$VCPKG_ROOT/installed"; then
+              find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+                echo "$_1:"
+                echo "======"
+                cat "$_1"
+                echo "======"
+                echo ""
+              done
+              exit 1
+            fi
+            head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+          fi
             exit 1
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
