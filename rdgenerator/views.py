@@ -274,13 +274,25 @@ def download(request):
     uuid = request.GET['uuid']
     #filename = filename+".exe"
     file_path = os.path.join('exe',uuid,filename)
-    with open(file_path, 'rb') as file:
-        response = HttpResponse(file, headers={
-            'Content-Type': 'application/vnd.microsoft.portable-executable',
-            'Content-Disposition': f'attachment; filename="{filename}"'
-        })
-
-    return response
+    print(f"Download request - UUID: {uuid}, Filename: {filename}, Path: {file_path}")
+    
+    try:
+        if not os.path.exists(file_path):
+            print(f"ERROR: File not found at {file_path}")
+            return HttpResponse(f"File not found: {filename}", status=404)
+            
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file, headers={
+                'Content-Type': 'application/vnd.microsoft.portable-executable',
+                'Content-Disposition': f'attachment; filename="{filename}"'
+            })
+        print(f"Download successful: {filename}")
+        return response
+    except Exception as e:
+        print(f"ERROR downloading file: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error downloading file: {str(e)}", status=500)
 
 def get_png(request):
     filename = request.GET['filename']
