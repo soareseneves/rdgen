@@ -418,12 +418,27 @@ def save_png(file, uuid, domain, name):
     return json.dumps(imageJson)
 
 def save_custom_client(request):
-    file = request.FILES['file']
-    myuuid = request.POST.get('uuid')
-    file_save_path = "exe/%s/%s" % (myuuid, file.name)
-    Path("exe/%s" % myuuid).mkdir(parents=True, exist_ok=True)
-    with open(file_save_path, "wb+") as f:
-        for chunk in file.chunks():
-            f.write(chunk)
-
-    return HttpResponse("File saved successfully!")
+    try:
+        print(f"save_custom_client called - Method: {request.method}")
+        print(f"FILES: {request.FILES}")
+        print(f"POST: {request.POST}")
+        
+        file = request.FILES['file']
+        myuuid = request.POST.get('uuid')
+        
+        print(f"Saving file: {file.name} for UUID: {myuuid}")
+        
+        file_save_path = "exe/%s/%s" % (myuuid, file.name)
+        Path("exe/%s" % myuuid).mkdir(parents=True, exist_ok=True)
+        
+        with open(file_save_path, "wb+") as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+        
+        print(f"File saved successfully at: {file_save_path}")
+        return HttpResponse("File saved successfully!")
+    except Exception as e:
+        print(f"ERROR saving file: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error: {str(e)}", status=500)
