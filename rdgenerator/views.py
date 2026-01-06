@@ -243,10 +243,12 @@ def generator_view(request):
             }
             create_github_run(myuuid)
             response = requests.post(url, json=data, headers=headers)
-            print(response)
+            print(f"GitHub API Response Status: {response.status_code}")
+            print(f"GitHub API Response Body: {response.text}")
             if response.status_code == 204:
                 return render(request, 'waiting.html', {'filename':filename, 'uuid':myuuid, 'status':"Starting generator...please wait", 'platform':platform})
             else:
+                print(f"GitHub API Error - Status: {response.status_code}, Body: {response.text}")
                 return JsonResponse({"error": "Something went wrong"})
     else:
         form = GenerateForm()
