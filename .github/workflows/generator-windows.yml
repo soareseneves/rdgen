@@ -195,10 +195,10 @@ jobs:
           sed -i -e 's|"rustdesk.exe"|"${{ inputs.filename }}"|' ./flutter/windows/runner/Runner.rc
           sed -i -e 's|"RustDesk"|"${{ inputs.appname }}"|' ./flutter/windows/runner/Runner.rc
           # ./src/lang/en.rs
+          if [ ! -z "${{ fromJson(inputs.extras).compname }}" ]; then
+            find ./src/lang -name "*.rs" -exec sed -i '/powered_by_me/s|RustDesk|${{ fromJson(inputs.extras).compname }}|g' {} \;
+          fi
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ inputs.appname }}|' {} \;
-          # Fix "Developed by" in home page to use company name
-          sed -i -e 's|by ${{ inputs.appname }}|by ${{ fromJson(inputs.extras).compname }}|g' ./flutter/lib/desktop/pages/desktop_home_page.dart
-          sed -i -e 's|por ${{ inputs.appname }}|por ${{ fromJson(inputs.extras).compname }}|g' ./flutter/lib/desktop/pages/desktop_home_page.dart
 
       - name: fix registry if appname has a space
         if: contains(inputs.appname, ' ')
